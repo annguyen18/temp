@@ -2,6 +2,13 @@ import axios from 'axios';
 import { RESPONSE_STATUS, LOCAL_STORAGE_AUTH } from '@/utils/constants';
 import { localStorageHelper } from '@/utils/helper';
 
+export type StatusResponse = {
+    code: string;
+    displayMessage: string;
+    message: string;
+    responseTime: string;
+}
+
 class DefaultService {
     api;
     constructor() {
@@ -9,6 +16,7 @@ class DefaultService {
             baseURL: `${import.meta.env.VITE_APP_API_URL}`,
             headers: {
                 'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + localStorageHelper.get(LOCAL_STORAGE_AUTH),
             },
             withCredentials: true,
 

@@ -1,180 +1,302 @@
 <template>
-    <div class="panel">
-        <div class="mb-5">
-            <!-- <div class="mb-5">
-                <flat-pickr @input="getStudents" v-model="today" class="form-input text-center w-1/6"></flat-pickr>
-            </div> -->
-            <form @submit.prevent="submitAttendance()">
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>STT</th>
-                                <th>Họ tên</th>
-                                <th>Điểm danh</th>
-                                <th>Giáo viên dạy</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template v-for="(student, index) in students" :key="student.id">
-                                <tr :class="{ 'grayed-out': !student.present }">
-                                    <td class="whitespace-nowrap">{{ index + 1 }}</td>
-                                    <td>{{ student.fullName }}</td>
-                                    <input type="text" class="form-input" hidden v-model="student.id">
-                                    <td>
-                                        <label class="inline-flex">
-                                            <input type="checkbox" class="form-checkbox text-success"
-                                                v-model="student.present"/>
-                                            <span>Có mặt</span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <select v-if="student.present" id="teacher" name="teacher" class="form-select" :disabled="student.hasTeacher" v-model="student.teacherId">
-                                            <option disabled value="" selected>Select a teacher</option>
-                                            <template v-for="teacher in teachers" :key="teacher.id">
-                                            <option :value="teacher.id">{{ teacher.fullName }}</option>
-                                            </template>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </template>
-                            
-                        </tbody>
-                    </table>
-                </div>
-            </form>
-            <div class="mt-5 w-50 flex justify-center">
-                <button type="button" class="btn btn-danger">Thêm học sinh</button>
-            </div>
-            <div class="mt-5 w-50 flex justify-center">
-                <button type="button" class="btn btn-outline-success w-1/4" @click="submitForm()">Xác nhận</button>
-            </div>
-        </div>
+  <div class="panel">
+    <div class="mb-5">
+      <div class="mb-5">
+        <flat-pickr @input="onChangeDate" v-model="state.date"
+          class="form-input text-center w-1/6"></flat-pickr>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Họ tên</th>
+              <th>Điểm danh</th>
+              <th>Giáo viên dạy</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="(student, index) in state.listStudent"
+              :key="student.id">
+              <tr :class="{ 'grayed-out': !student.isPresent }">
+                <td class="whitespace-nowrap">{{ index + 1 }}</td>
+                <td>{{ student.fullName }}</td>
+                <input type="text" class="form-input" hidden
+                  v-model="student.id">
+                <td>
+                  <label class="inline-flex">
+                    <input type="checkbox" class="form-checkbox text-success"
+                      v-model="student.isPresent" />
+                    <span>Có mặt</span>
+                  </label>
+                </td>
+                <td>
+                  <select v-if="student.isPresent" id="teacher" name="teacher"
+                    class="form-select"
+                    @change="($event) => { onChangeTeacher($event, student.id) }">
+                    <option disabled value="" selected>Select a teacher</option>
+                    <template v-for="teacher in state.listTeacher"
+                      :key="teacher.id">
+                      <option :value="teacher.id">{{ teacher.user.fullName }}
+                      </option>
+                    </template>
+                  </select>
+                </td>
+              </tr>
+            </template>
+
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-5 w-50 flex justify-center">
+        <button type="button" class="btn btn-danger"
+          @click="state.showCreateModal = true">Thêm học sinh</button>
+      </div>
+      <div class="mt-5 w-50 flex justify-center">
+        <button type="button" class="btn btn-outline-success w-1/4"
+          @click.prevent='onSubmitAttendance'>Xác nhận</button>
+      </div>
     </div>
+  </div>
+
+  <div>
+
+    <!-- Modal -->
+    <TransitionRoot appear :show="state.showCreateModal" as="template">
+      <Dialog as="div" @close="state.showCreateModal = false"
+        class="relative z-50">
+        <TransitionChild as="template" enter="duration-300 ease-out"
+          enter-from="opacity-0" enter-to="opacity-100"
+          leave="duration-200 ease-in" leave-from="opacity-100"
+          leave-to="opacity-0">
+          <DialogOverlay class="fixed inset-0 bg-[black]/60" />
+        </TransitionChild>
+
+        <div class="fixed inset-0 overflow-y-auto">
+          <div class="flex min-h-full items-start justify-center px-4 py-8">
+            <TransitionChild as="template" enter="duration-300 ease-out"
+              enter-from="opacity-0 scale-95" enter-to="opacity-100 scale-100"
+              leave="duration-200 ease-in" leave-from="opacity-100 scale-100"
+              leave-to="opacity-0 scale-95">
+              <DialogPanel
+                class="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-xl text-black dark:text-white-dark">
+                <div
+                  class="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
+                  Modal Title</div>
+                <div class="p-5">
+                  <form class="flex flex-col gap-3">
+                    <label for="fullname">Full Name</label>
+                    <input type="text" placeholder="Full Name"
+                      v-model='formState.fullName' class="form-input"
+                      required />
+                    <div class="grid grid-cols-1 sm:flex justify-between gap-5">
+                      <div>
+                        <label for="dob">Date of Birth</label>
+                        <flat-pickr v-model="formState.dateOfBirth"
+                          class="form-input" :config="basic"></flat-pickr>
+                      </div>
+                      <div>
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" placeholder="0123456789"
+                          v-model='formState.phoneNumber' class="form-input"
+                          required />
+                      </div>
+                    </div>
+                    <label for="joinDate">Join Date</label>
+                    <flat-pickr v-model="formState.joinDate" class="form-input"
+                      :config="basic"></flat-pickr>
+                    <label for="joinDate">Parent Name</label>
+                    <input type="text" placeholder="Some Text..."
+                      v-model='formState.parentName' class="form-input"
+                      required />
+                    <label for="joinDate">Parent Phone Number</label>
+                    <input type="tel" placeholder="0123456789"
+                      v-model='formState.parentPhoneNumber' class="form-input"
+                      required />
+                  </form>
+
+                  <div class="flex justify-end items-center mt-8">
+                    <button type="button" @click="state.showCreateModal = false"
+                      class="btn btn-outline-danger">Discard</button>
+                    <button type="submit" @click="onSubmitCreateStudent"
+                      class="btn btn-primary ltr:ml-4 rtl:mr-4">Save</button>
+                  </div>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </div>
+      </Dialog>
+    </TransitionRoot>
+  </div>
 </template>
 <script lang="ts" setup>
-import IconCaretDown from '@/components/icon/icon-caret-down.vue';
 import { useAppStore } from '@/stores/index';
-import { ref, onMounted, getCurrentInstance, watch, onBeforeUnmount, computed } from 'vue';
-import highlight from '@/components/plugins/highlight.vue';
-import IconCode from '@/components/icon/icon-code.vue';
-import IconSearch from '@/components/icon/icon-search.vue';
-import IconHorizontalDots from '@/components/icon/icon-horizontal-dots.vue';
+import { onMounted, reactive, ref } from 'vue';
 import flatPickr from 'vue-flatpickr-component';
 import 'flatpickr/dist/flatpickr.css';
-import axios from 'axios';
-import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogOverlay } from '@headlessui/vue';
-import { useRoute, useRouter } from "vue-router";
 import Swal from 'sweetalert2';
-import Multiselect from '@suadelabs/vue3-multiselect';
 import '@suadelabs/vue3-multiselect/dist/vue3-multiselect.css';
-import { log } from 'console';
+import { createStudent, getStudents, getTeachers, saveAttendances } from '@/api/attendances';
+import dayjs from 'dayjs';
+import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogOverlay } from '@headlessui/vue';
+
+type StateType = {
+  listStudent: {
+    id: string;
+    fullName: string;
+    isPresent: boolean;
+    teacherId: string | null;
+  }[];
+  listTeacher: {
+    id: string;
+    salary: number;
+    user: {
+      authorities: unknown[];
+      dateOfBirth: string;
+      email: string;
+      fullName: string;
+      id: string;
+      phoneNumber?: string;
+      sex: boolean;
+      status: number;
+      username?: string;
+    }
+  }[];
+  date: string;
+  showCreateModal: boolean;
+}
+
+type FormStateType = {
+  fullName: string;
+  dateOfBirth: string;
+  phoneNumber: string;
+  joinDate: string;
+  parentName: string;
+  parentPhoneNumber: string;
+}
 
 const store = useAppStore();
-const teachers = ref([]);
-const selectedTeachers = ref([]); // Array to store selected teacher IDs
 
-const students = ref([]);
-interface Attendance {
-    id: {
-        id: number,
-        date: date
-    }; 
-    fullName: string;
-    present: boolean; 
-    teacherId?: number;
-}
-async function fetchData() {
+const state: StateType = reactive({
+  listStudent: [],
+  listTeacher: [],
+  date: dayjs().format('YYYY-MM-DD'),
+  showCreateModal: false,
+})
+
+const formState: FormStateType = reactive({
+  fullName: "",
+  dateOfBirth: dayjs().format('YYYY-MM-DD'),
+  phoneNumber: "",
+  joinDate: dayjs().format('YYYY-MM-DD'),
+  parentName: "",
+  parentPhoneNumber: "",
+})
+
+const basic: any = ref({
+  dateFormat: 'Y-m-d',
+  position: store.rtlClass === 'rtl' ? 'auto right' : 'auto left',
+});
+
+const fetchData = async () => {
   try {
-    const apiUrl = import.meta.env.VITE_APP_API_URL + 'admin/students/names-and-ids';
-    const response = await axios.get(apiUrl);
-    students.value = response.data.data; // Update students with fetched data
-    
+    const { data: listStudent } = await getStudents();
+    state.listStudent = listStudent.map((student) => ({ ...student, isPresent: false, teacherId: null }));
+
+    const { data: listTeacher } = await getTeachers();
+    state.listTeacher = listTeacher;
   } catch (error) {
     console.error('Error fetching student data:', error);
-    // Handle error, e.g., display an error message to the user
   }
 }
 
-fetchData();
-let today = ref();
-
-
-const date1 = ref(new Date().toISOString().substr(0, 10));
-const basic: any = ref({
-    dateFormat: 'Y-m-d',
-    position: store.rtlClass === 'rtl' ? 'auto right' : 'auto left',
-});
-
-
-async function getTeachers() {
-    const apiUrl = import.meta.env.VITE_APP_API_URL + 'admin/students/names-and-ids';
-    const response = await axios.get(apiUrl);
-    teachers.value = response.data.data;
-};
-
-function updateLocalStorage() {
-  localStorage.setItem('selectedTeachers', JSON.stringify(selectedTeachers.value));
-}
-let attendances = [];
-
-
-// async function submitAttendance(this: { $forceUpdate(): void }) {
-//     const apiUrl = import.meta.env.VITE_APP_API_URL + `admin/attendances`;
-
-//     try {
-//         const dataToSend = students.value.map(student => ({
-//             id: {
-//                 id: student.id,
-//                 date: date1.value
-//             },
-//             present: student.present,
-//             teacherId: student.teacherId ? student.teacherId.id : null
-//         }));
-
-//         if (dataToSend.some(student => student.present && !student.teacherId)) {
-//             Swal.fire({
-//                 icon: 'error',
-//                 title: 'Đã có lỗi xảy ra',
-//                 text: 'Hãy chọn giáo viên dạy!',
-//                 padding: '2em',
-//                 customClass: 'sweet-alerts',
-//             });
-//             return;
-//         }
-
-//         const response = await axios.post(apiUrl, dataToSend);
-//         showAlert();
-//         const instance = getCurrentInstance();
-//         instance?.proxy?.$forceUpdate();
-//     } catch (error) {
-//         console.error('Error sending data:', error);
-//     }
-// }
-
-const showAlert = async () => {
-    Swal.fire({
-        icon: 'success',
-        title: 'Điểm danh thành công',
+const onSubmitAttendance = async () => {
+  try {
+    const params = state.listStudent.map(student => ({
+      id: {
+        id: student.id,
+        date: state.date,
+      },
+      present: student.isPresent,
+      teacherId: student.teacherId ?? null,
+    }));
+    if (params.some(student => student.present && !student.teacherId)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Đã có lỗi xảy ra',
+        text: 'Hãy chọn giáo viên dạy!',
         padding: '2em',
         customClass: 'sweet-alerts',
+      });
+      return;
+    }
+    const response = await saveAttendances(params);
+    console.log(response)
+    Swal.fire({
+      icon: 'success',
+      title: 'Điểm danh thành công',
+      padding: '2em',
+      customClass: 'sweet-alerts',
     });
+    } catch (error) {
+    console.error('Error sending data:', error);
+  }
+}
+
+const onSubmitCreateStudent = async () => {
+  try {
+    const payload = {
+      fullName: formState.fullName.trim(),
+      dateOfBirth: formState.dateOfBirth.trim(),
+      phoneNumber: formState.phoneNumber.trim(),
+      joinDate: formState.joinDate.trim(),
+      parentName: formState.parentName.trim(),
+      parentPhoneNumber: formState.parentPhoneNumber.trim(),
+    }
+    const { data } = await createStudent(payload);
+    Swal.fire({
+      icon: 'success',
+      title: 'Thêm học sinh thành công',
+      padding: '2em',
+      customClass: 'sweet-alerts',
+    });
+
+    // TODOS: On response when create student success need id of student created
+    // state.listStudent = [
+    //   ...state.listStudent,
+    //   {
+    //     id: data.id,
+    //     fullName: data.fullName,
+    //     isPresent: false,
+    //     teacherId: null,
+    //   },
+    // ]
+
+    await fetchData();
+    state.showCreateModal = false;
+  } catch (error) {
+
+    state.showCreateModal = false;
+  }
+}
+
+const onChangeDate = (event) => {
+  state.date = event.target.value;
+}
+
+const onChangeTeacher = (event, studentId) => {
+  state.listStudent = [...state.listStudent].map((student) => {
+    if (student.id !== studentId) return student;
+    return ({
+      ...student,
+      teacherId: event.target.value,
+    })
+  })
 }
 
 onMounted(async () => {
-  await getTeachers();
-  const storedSelection = localStorage.getItem('selectedTeachers');
-  if (storedSelection) {
-    selectedTeachers.value = JSON.parse(storedSelection);
-  }
+  await fetchData();
 });
-// onMounted(() => {
-//     // getStudents();
-//     await fetchTeachers();
-//   const storedSelection = localStorage.getItem('selectedTeachers');
-//   if (storedSelection) {
-//     selectedTeachers.value = JSON.parse(storedSelection);
-//   }
-// });
 
 </script>

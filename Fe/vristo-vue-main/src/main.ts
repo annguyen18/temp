@@ -52,6 +52,12 @@ app.component('Popper', Popper);
 import vue3JsonExcel from 'vue3-json-excel';
 app.use(vue3JsonExcel);
 
+// date formatter
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime"; 
+dayjs.extend(relativeTime)
+dayjs.locale('es')
+
 router.isReady().then(() => {
     app.mount('#app')
 })
