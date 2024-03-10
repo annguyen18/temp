@@ -1,7 +1,57 @@
 <template>
   <div class="panel">
     <div class="mb-5">
-      <div class="mb-5">
+      <div class="flex gap-4 mb-5">
+        <div class="dropdown">
+          <Popper
+            :placement="store.rtlClass === 'rtl' ? 'bottom-start' : 'bottom-end'"
+            offsetDistance="0" class="align-middle">
+            <button type="button"
+              class="btn btn-outline-primary dropdown-toggle w-24">
+              {{ state.weekdays.label }}
+            </button>
+            <template #content="{ close }">
+              <ul @click="($event) => {
+              onChangeWeekdays($event);
+              close();
+            }" class="whitespace-nowrap w-24">
+                <template v-for="weekdays in WEEKDAYS_DEFINE"
+                  :key="weekdays.value">
+                  <li><a class="cursor-pointer" :data-label="weekdays.label"
+                      :data-value="weekdays.value">{{
+              weekdays.label }}</a>
+                  </li>
+                </template>
+              </ul>
+            </template>
+          </Popper>
+        </div>
+        <div class="dropdown">
+          <Popper
+            :placement="store.rtlClass === 'rtl' ? 'bottom-start' : 'bottom-end'"
+            offsetDistance="0" class="align-middle">
+            <button type="button"
+              class="btn btn-outline-primary dropdown-toggle w-40">
+              {{ state.shifts.label }}
+            </button>
+            <template #content="{ close }">
+              <ul @click="($event) => {
+              onChangeShifts($event);
+              close();
+            }" class="whitespace-nowrap w-40">
+                <template v-for="shifts in SHIFTS_DEFINE" :key="shifts.value">
+                  <li><a class="cursor-pointer" :data-label="shifts.label"
+                      :data-value="shifts.value">{{
+              shifts.label }}</a>
+                  </li>
+                </template>
+              </ul>
+            </template>
+          </Popper>
+        </div>
+        <button type="button" class="btn btn-success"
+          :disabled="!state.weekdays.value || !state.shifts.value"
+          @click="onFetchData">Hiện kết quả</button>
         <flat-pickr @input="onChangeDate" v-model="state.date"
           class="form-input text-center w-1/6"></flat-pickr>
       </div>
@@ -60,7 +110,6 @@
   </div>
 
   <div>
-
     <!-- Modal -->
     <TransitionRoot appear :show="state.showCreateModal" as="template">
       <Dialog as="div" @close="state.showCreateModal = false"
@@ -97,7 +146,7 @@
                       </div>
                       <div>
                         <label for="phoneNumber">Phone Number</label>
-                        <input type="tel" placeholder="0123456789"
+                        <input type="tel" placeholder="Phone Number"
                           v-model='formState.phoneNumber' class="form-input"
                           required />
                       </div>
@@ -106,11 +155,11 @@
                     <flat-pickr v-model="formState.joinDate" class="form-input"
                       :config="basic"></flat-pickr>
                     <label for="joinDate">Parent Name</label>
-                    <input type="text" placeholder="Some Text..."
+                    <input type="text" placeholder="Parent Name"
                       v-model='formState.parentName' class="form-input"
                       required />
                     <label for="joinDate">Parent Phone Number</label>
-                    <input type="tel" placeholder="0123456789"
+                    <input type="tel" placeholder="Parent Phone Number"
                       v-model='formState.parentPhoneNumber' class="form-input"
                       required />
                   </form>
@@ -137,9 +186,10 @@ import flatPickr from 'vue-flatpickr-component';
 import 'flatpickr/dist/flatpickr.css';
 import Swal from 'sweetalert2';
 import '@suadelabs/vue3-multiselect/dist/vue3-multiselect.css';
-import { createStudent, getStudents, getTeachers, saveAttendances } from '@/api/attendances';
+import { createStudent, getStudents, getTeachers, saveAttendances, getAttendances } from '@/api/attendances';
 import dayjs from 'dayjs';
 import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogOverlay } from '@headlessui/vue';
+import { SHIFTS_DEFINE, WEEKDAYS_DEFINE } from '@/constants/attendances';
 
 type StateType = {
   listStudent: {
@@ -163,6 +213,14 @@ type StateType = {
       username?: string;
     }
   }[];
+  weekdays: {
+    label: string;
+    value: string | undefined;
+  };
+  shifts: {
+    label: string;
+    value: string | undefined;
+  };
   date: string;
   showCreateModal: boolean;
 }
@@ -181,6 +239,14 @@ const store = useAppStore();
 const state: StateType = reactive({
   listStudent: [],
   listTeacher: [],
+  weekdays: {
+    label: "Thứ",
+    value: undefined,
+  },
+  shifts: {
+    label: "Ca",
+    value: undefined,
+  },
   date: dayjs().format('YYYY-MM-DD'),
   showCreateModal: false,
 })
@@ -199,15 +265,18 @@ const basic: any = ref({
   position: store.rtlClass === 'rtl' ? 'auto right' : 'auto left',
 });
 
-const fetchData = async () => {
+const onFetchData = async () => {
   try {
-    const { data: listStudent } = await getStudents();
-    state.listStudent = listStudent.map((student) => ({ ...student, isPresent: false, teacherId: null }));
+    const { data: listStudentAttendances } = await getAttendances({
+      day: state.weekdays.value,
+      time: state.shifts.value,
+    })
+    state.listStudent = listStudentAttendances.map((student) => ({ ...student, isPresent: false, teacherId: null }));
 
     const { data: listTeacher } = await getTeachers();
     state.listTeacher = listTeacher;
   } catch (error) {
-    console.error('Error fetching student data:', error);
+    console.log("Failed at fetch student attendances")
   }
 }
 
@@ -239,7 +308,7 @@ const onSubmitAttendance = async () => {
       padding: '2em',
       customClass: 'sweet-alerts',
     });
-    } catch (error) {
+  } catch (error) {
     console.error('Error sending data:', error);
   }
 }
@@ -295,8 +364,18 @@ const onChangeTeacher = (event, studentId) => {
   })
 }
 
-onMounted(async () => {
-  await fetchData();
-});
+const onChangeWeekdays = (event) => {
+  state.weekdays = {
+    label: event.target.dataset.label,
+    value: event.target.dataset.value,
+  };
+}
+
+const onChangeShifts = (event) => {
+  state.shifts = {
+    label: event.target.dataset.label,
+    value: event.target.dataset.value,
+  };
+}
 
 </script>

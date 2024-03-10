@@ -38,6 +38,18 @@ interface CreateStudentResponseType extends StatusResponse {
   data: CreateStudentPayloadType;
 }
 
+interface GetAttendancesPayloadType {
+  day: string | number;
+  time: string | number;
+}
+
+interface FetchAttendancesResponse extends StatusResponse {
+  data: {
+    id: string;
+    fullName: string;
+  }[]
+}
+
 interface SaveAttendancePayloadType {
   id: {
     id: string;
@@ -62,6 +74,12 @@ export const getTeachers = () => new Promise<FetchTeachersResponse>((resolve, re
 export const createStudent = (payload: CreateStudentPayloadType) => new Promise<CreateStudentResponseType>((resolve, reject) => {
   DefaultService.post('/admin/students', payload)
     .then((res: CreateStudentResponseType) => resolve(res))
+    .catch((error: { response: { data: any; }; }) => reject(error.response.data));
+});
+
+export const getAttendances = (payload: GetAttendancesPayloadType) => new Promise<FetchAttendancesResponse>((resolve, reject) => {
+  DefaultService.get('/admin/students/by-schedule', payload)
+    .then((res: FetchAttendancesResponse | PromiseLike<FetchAttendancesResponse>) => resolve(res))
     .catch((error: { response: { data: any; }; }) => reject(error.response.data));
 });
 
