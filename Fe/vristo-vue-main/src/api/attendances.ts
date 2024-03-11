@@ -39,8 +39,8 @@ interface CreateStudentResponseType extends StatusResponse {
 }
 
 interface GetAttendancesPayloadType {
-  day: string | number;
-  time: string | number;
+  day: string | undefined;
+  time: string | undefined;
 }
 
 interface FetchAttendancesResponse extends StatusResponse {
