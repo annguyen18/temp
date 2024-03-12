@@ -267,7 +267,13 @@
         try {
             const { data } = await getStudents();
             formState.listStudent = data.map((student) => ({ ...student, selected: false }));
-            formState.listStudentRendered = data.map((student) => ({ ...student, selected: false }));
+            formState.listStudentRendered = data
+                .filter((student) => {
+                    const studentInList = state.listStudent.filter((studentState) => studentState.id === student.id);
+                    if (studentInList.length) return;
+                    return student;
+                })
+                .map((student) => ({ ...student, selected: false }));
 
             const { data: listTeacher } = await getTeachers();
             state.listTeacher = listTeacher;
@@ -283,6 +289,7 @@
                 time: state.shifts.value,
             });
             state.listStudent = listStudentAttendances.map((student) => ({ ...student, isPresent: false, teacherId: null }));
+            await initFetchData();
         } catch (error) {
             console.log('Failed at fetch student attendances');
         }
@@ -370,25 +377,33 @@
         };
     };
 
-    const onChangeCreateStudentList = ({ id, fullName }: { id: string; fullName: string }) => {
-        formState.listStudent = formState.listStudent.map((student) => {
-            if (student.id !== id) {
+    const onChangeCreateStudentList = ({ id }: { id: string; fullName: string }) => {
+        formState.listStudent = formState.listStudent
+            .filter((student) => {
+                const studentInList = state.listStudent.filter((studentState) => studentState.id === student.id);
+                if (studentInList.length) return;
                 return student;
-            }
-            return {
-                ...student,
-                selected: !student.selected,
-            };
-        });
-        formState.listStudentRendered = formState.listStudentRendered.map((student) => {
-            if (student.id !== id) {
+            })
+            .map((student) => {
+                if (student.id !== id) return student;
+                return {
+                    ...student,
+                    selected: !student.selected,
+                };
+            });
+        formState.listStudentRendered = formState.listStudentRendered
+            .filter((student) => {
+                const studentInList = state.listStudent.filter((studentState) => studentState.id === student.id);
+                if (studentInList.length) return;
                 return student;
-            }
-            return {
-                ...student,
-                selected: !student.selected,
-            };
-        });
+            })
+            .map((student) => {
+                if (student.id !== id) return student;
+                return {
+                    ...student,
+                    selected: !student.selected,
+                };
+            });
     };
 
     onMounted(() => {
